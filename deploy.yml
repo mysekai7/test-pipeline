@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: test
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      service_name: backend
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        service_name: backend
+    spec:
+      containers:
+      - command:
+        - /test/cloud
+        image: 127.0.0.1:60080/ait/backend:latest
+        imagePullPolicy: IfNotPresent
+        name: backend
+        ports:
+        - containerPort: 8199
+          protocol: TCP
+        - containerPort: 8200
+          protocol: TCP
+        resources:
+          limits:
+            cpu: "2"
+            memory: 4Gi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /backend/config/config.yaml
+          name: config
+          subPath: config.yaml
+        - mountPath: /backend/public/jsons
+          name: ui-json
+        - mountPath: /backend/config/online-upgrade-path.yaml
+          name: online-upgrade-path
+          subPath: online-upgrade-path.yaml
+        - mountPath: /backend/config/upgrade-matrix.yaml
+          name: upgrade-matrix
+          subPath: upgrade-matrix.yaml
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        alaudacloud-external: "true"
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: config.yaml
+            path: config.yaml
+          name: cloud-backend
+        name: config
+      - configMap:
+          defaultMode: 420
+          name: ui-json
+        name: ui-json
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: online-upgrade-path.yaml
+            path: online-upgrade-path.yaml
+          name: online-upgrade-path
+        name: online-upgrade-path
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: upgrade-matrix.yaml
+            path: upgrade-matrix.yaml
+          name: upgrade-matrix
+        name: upgrade-matrix
